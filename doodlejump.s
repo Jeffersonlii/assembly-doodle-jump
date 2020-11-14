@@ -53,17 +53,22 @@
 	  
 	  # dims (all already spaced by 4)
 	  lw $t4, screenUnit
-
+	  li $t2, 4
 	  lw $s4, screenWidth
 	  div $s4, $t4
+	  mflo $s4
+	  mult $s4, $t2
 	  mflo $s4
 	  
 	  lw $s5, screenHight
 	  div $s5, $t4
 	  mflo $s5
+	  mult $s5, $t2
+	  mflo $s5
 	  
 	  # game states
 	  li $s6, 0 # vertical velocity
+	  
 	  li $t8, 0 # doodle x position 
 	  li $t9, 0 # doodle y position 
 	  # util
@@ -92,11 +97,11 @@ onMove:# only handle horizontal user movement and redraw, do not redraw if no mo
 		beq $t2, 0x6b, moveRight
 		j onMoveDone
 	moveLeft:
-		subi $t8, $t8, 1
+		subi $t8, $t8, 4
 		jal DrawDoodle
 		j onMoveDone
 	moveRight:
-		addi $t8, $t8, 1
+		addi $t8, $t8, 4
 		jal DrawDoodle
 	onMoveDone:
 
@@ -105,19 +110,10 @@ onMove:# only handle horizontal user movement and redraw, do not redraw if no mo
 DrawDoodle: 
 # draws sprite based on $t8 = x, $t9 = y
 # todo support turning around
-	li $t4, 4
-	mult $t9, $t4
-	mflo $t0 #y * 4
 	
-	mult $t8, $t4
-	mflo $t2 #x * 4
-	
-	mult $s4, $t4 
-	mflo $t1 #width * 4
-	
-	
-	add $t0, $t0, $t1 # y + width
-	add $t0, $t0, $t2 # y + x
+	mult $t9, $s4 
+	mflo $t0 # y * width
+	add $t0, $t9, $t8 # y + x
 	add $t0, $t0, $s0, # coord + address base
 	
        	#paint new 
