@@ -34,7 +34,7 @@
 
 .data
 	p: .asciiz "HELP MEEE "
-	displayAddress:	.word	0x10008000
+	displayAddress:	.word 0x10008000
 	screenWidth: .word 512
 	screenHight: .word 512
 	screenUnit: .word 16
@@ -42,49 +42,41 @@
 	limeGreen: .word 0x7bf542
 	baigeGreen: .word 0xdaf542
 	background: .word 0xe8d697
-	
-	positionStruct: .word 0, 0, 0, 0 # current x,y |last x,y
+		             #0  4  8  12
+	positionStruct: .word 0, 0, 0, displayAddress # current x,y | velocity | previous pixel position to repaint
 .text
 	# global registers
-	
-	  # colour
-	  lw $s0, displayAddress # displayAddress
-	  lw $s1, limeGreen	# lime green
-	  lw $s2, baigeGreen	# baige green
-	  lw $s3, background    # background baige
-	  
-	  # dims (all already spaced by 4)
+          lw $s0, displayAddress # displayAddress
+         # game states
+      	  la $s1, positionStruct #spaced by 4
+	 # dims (all already spaced by 4) 
 	  lw $t4, screenUnit
 	  li $t2, 4
 	  lw $s4, screenWidth
 	  div $s4, $t4
 	  mflo $s4
 	  mult $s4, $t2
-	  mflo $s4
+	  mflo $s4 # s4 is screen width 
 	  
 	  lw $s5, screenHight
 	  div $s5, $t4
 	  mflo $s5
 	  mult $s5, $t2
-	  mflo $s5
+	  mflo $s5 # s4 is screen height 
 	  
-	  # game states
-	  li $s6, 0 # vertical velocity
-	  
-	  li $t8, 0 # doodle x position 
-	  li $t9, 0 # doodle y position 
+
 	# END global registers
 	
 GameLoop:
 	jal onMove # first check player position and update accordingly
-	#li $v0, 32 # sleep, enable later
-	#li $a0, 1000
-	#syscall
+	# li $v0, 32 # sleep, enable later
+	# li $a0, 1000
+	# syscall
 	# todo pain background
 	j GameLoop
 	j Exit
 
-onMove:# only handle horizontal user movement and redraw, do not redraw if no movement
+onMove: # only handle horizontal user movement and redraw, do not redraw if no movement
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # push ra on stack
 	
@@ -92,17 +84,29 @@ onMove:# only handle horizontal user movement and redraw, do not redraw if no mo
 	beq $t0, 1, keyboard_input
 	j onMoveDone
 	
-	keyboard_input:
-		lw $t2, 0xffff0004
+	keyboard_input:	
+		lw $t2, 0xffff0004 # get input (j or k)
 		
+		# store past x and y here
 		beq $t2, 0x6a, moveLeft
 		beq $t2, 0x6b, moveRight
+
 		j onMoveDone
 	moveLeft:
-		subi $t8, $t8, 4
+        	lw $t0, 0($s1) 
+        	beq $t0, 0, onMoveDone # if at corner, dont move
+        	addi $t0, $t0, -4 # move left by 1 
+        	sw $t0, 0($s1) 
+
 		jal DrawDoodle
 		j onMoveDone
 	moveRight:
+        	lw $t0, 0($s1)
+        	# todo 
+        	# beq $t0, , onMoveDone # if at corner, dont move
+        	addi $t0, $t0, 4 # move left by 1 
+       		sw $t0, 0($s1) 
+
 		addi $t8, $t8, 4
 		jal DrawDoodle
 		
@@ -112,22 +116,33 @@ onMove:# only handle horizontal user movement and redraw, do not redraw if no mo
 	jr $t1 # return
 	
 DrawDoodle: 
-# draws sprite based on $t8 = x, $t9 = y
+# draws sprite based on position struct
 # todo support turning around
-	
-	mult $t9, $s4 
-	mflo $t0 # y * width
-	add $t0, $t9, $t8 # y + x
-	add $t0, $t0, $s0, # coord + address base
-	
-	#paint old 
-	
-	
-       	#paint new 
 
-	sw $s2, ($t0)
-	sw $s2, 4($t0)
+	#replace old paint
+	lw $t5, background
+	
+	lw $t0, 12($s1)
+	sw $t5, 0($t0)
+	sw $t5, 4($t0)
 
+	# paint new position
+	lw $t0, 0($s1) # x
+    	lw $t1, 4($s1) # y
+
+	mult $t1, $s4 
+	mflo $t3 # y * width
+	add $t4, $t3, $t0 # y + x
+	add $t4, $t4, $s0, # coord + address base
+
+	lw $t5, limeGreen
+	# fill colours 
+	sw $t5, ($t4)
+	sw $t5, 4($t4)
+
+	#save last location to paint over
+        sw $t4, 12($s1)
+        	
 	jr $ra # return
 
 DrawPadSolid:
