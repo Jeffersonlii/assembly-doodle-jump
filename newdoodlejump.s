@@ -43,7 +43,7 @@
 	background: .word 0xe8d697
 	padGreen: .word 0x39fc03
 		             #0  4  8  12
-	positionStruct: .word 56, 20, 0, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
+	positionStruct: .word 56, 20, -16, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 	                     
 	platforms: .space 10 # max of 10 platforms can be existing at 1 frame
@@ -75,7 +75,7 @@ Main:
 	jal FillBackground # fill backdrop first
 	jal initPads # init platform
 GameLoop:
-	jal Todocatch # placeholder 
+	jal Catch # catch gameover 
 	jal UpdateDoodleVertical # update verticality of doodle
 	jal OnMove # check for player onclick events
 	jal DrawDoodle # draw doodle updated position
@@ -263,16 +263,13 @@ FillBackground: # this function fills entire play area with background colour
 	FBend:
 	jr $ra
 
-Todocatch:
+Catch:
 
 	lw $t1, 4($s1) # y coord
 	bgt $t1, 30, cif
 	jr $ra
 	cif: 
-		li $t0, 31
-		sw $t0, 4($s1) # y
-		li $t0, -20
-		sw $t0, 8($s1) # accel
+		j Exit
 	jr $ra
 
 ConvertPixelPosToXY:
