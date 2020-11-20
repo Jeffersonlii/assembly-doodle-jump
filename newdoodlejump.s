@@ -69,7 +69,7 @@
 	  mflo $s5
 	  mult $s5, $t2
 	  mflo $s5 # s4 is screen height 
-
+	 # DO NOT USE S7,8
 	# END global registers
 Main:
 	jal FillBackground # fill backdrop first
@@ -175,29 +175,50 @@ initPads:# called once on init, randomly fills the platforms array
     	ipEnd:
     	jr $ra
 DrawPadAndHitTest: # draws pads from platforms
-	li $t0, 9
+	addi $sp, $sp, -4
+	sw $ra, 0($sp) # push ra on stack
+	li $t0, 9 # counter
 	sub $t0, $t0, $s3 # subtract number of pads from difficulty (more difficult = less pads)  
-	li $t1, 4 
 	
+	li $t1, 4 
+	lw $t5, padGreen # color to fill
 	lw $t7, 12($s1) # last location of doodle
 	dpfWhile:
     		mult $t0, $t1 
     		mflo $t4 # array index 
     		add $t4, $t4, $s2
     		
-    		lw $t3, 0($t4) # t3 has pad coords
-
-    		lw $t5, padGreen
+    		lw $t4, 0($t4) # t3 has pad coords
+    		
+    		sub $t6, $t4, $t7
+    		abs $t6, $t6 # absolute difference of pad and doodle
+    		blt $t6, 4, BounceDoodle # if the distance is close enough, we count is as contact, and bounce
+    		j SkipAcc
+    		BounceDoodle:
+    			addi $sp, $sp, -4
+			sw $t4, 0($sp) # push plateform coord on stack
+			jal ConvertPixelPosToXY # call converter
+			lw $s7, 0($sp) #get y
+			addi $sp, $sp, 8 #pop y and x off
+        
+			sw $s7, 4($s1) # y
+			li $s7, -15
+			sw $s7, 8($s1) # accel
+		SkipAcc:
+		
 		# fill colours 
-		sw $t5, ($t3)
-		sw $t5, 4($t3)
-		sw $t5, 8($t3)
-		sw $t5, 12($t3)
+		sw $t5, ($t4)
+		sw $t5, 4($t4)
+		sw $t5, 8($t4)
+		sw $t5, 12($t4)
     		beqz $t0, dpfEnd
     		addi $t0, $t0,  -1
     		j dpfWhile
     	dpfEnd:
-    	jr $ra
+    	lw $t0, 0($sp) #get ra
+	addi $sp, $sp, 4 #pop y and x off
+	
+    	jr $t0
     	
 ManagePads: # delete stale pads, append new ones as time goes by, min 2 pads 
 	
@@ -206,12 +227,17 @@ UpdateDoodleVertical: # called to update the doodle position based on velocity
 	lw $t0, 8($s1) # accell
 	lw $t1, 4($s1) # y coord
 	
-	li $t4, 2
-	div $t0 , $t4
-	mflo $t4
-	add $t1, $t1, $t4
-        sw $t1, 4($s1) # accelerate doodle
-
+	bltz $t0 HeadDown
+	j HeadUp
+	HeadDown:
+		addi $t1, $t1, -1
+        	sw $t1, 4($s1) # go up 
+        	j udpdone
+	HeadUp:
+		addi $t1, $t1, 1
+        	sw $t1, 4($s1) # go down
+        udpdone:
+        
         addi $t0 , $t0 , 1
 	sw $t0 , 8($s1) # decrement accell 
         
@@ -244,10 +270,25 @@ Todocatch:
 	cif: 
 		li $t0, 31
 		sw $t0, 4($s1) # y
-		li $t0, -9
+		li $t0, -20
 		sw $t0, 8($s1) # accel
 	jr $ra
+
+ConvertPixelPosToXY:
+	lw $t3, 0($sp) # t3 is decoding address
+	addi $sp, $sp, 4 #pop param off
 	
+	sub $t3, $t3, $s0 # take offset off
+	div $t3, $s4 
+	mflo $s7 # decoded y
+	mfhi $t8 # decoded x
+	
+	addi $sp, $sp, -4
+	sw $t8, 0($sp) # push x on stack
+	addi $sp, $sp, -4
+	sw $s7, 0($sp) # push y on stack
+	
+	jr $ra
 Exit:
 	li $v0, 4
         la $a0, gameover
