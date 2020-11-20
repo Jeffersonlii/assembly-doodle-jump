@@ -69,7 +69,7 @@
 	  mflo $s5
 	  mult $s5, $t2
 	  mflo $s5 # s4 is screen height 
-	 # DO NOT USE S7,8
+	 # DO NOT USE S6, 7
 	# END global registers
 Main:
 	jal FillBackground # fill backdrop first
@@ -157,7 +157,7 @@ initPads:# called once on init, randomly fills the platforms array
 	li $t0, 9 #counter
 	ipWhile:
 		li $v0, 42  #generates the random number.
-		li $a1, 700  #random num between 0 and 1000
+		li $a1, 500  #random num between 0 and 1000
     		syscall
     		li $t1, 4 
     		mult $a0, $t1 # a0 is out actual rng number
@@ -183,6 +183,8 @@ DrawPadAndHitTest: # draws pads from platforms
 	li $t1, 4 
 	lw $t5, padGreen # color to fill
 	lw $t7, 12($s1) # last location of doodle
+	addi $t7, $t7, -6 # centering factor
+	lw $s6, 8($s1) # current accel of doodle
 	dpfWhile:
     		mult $t0, $t1 
     		mflo $t4 # array index 
@@ -192,9 +194,11 @@ DrawPadAndHitTest: # draws pads from platforms
     		
     		sub $t6, $t4, $t7
     		abs $t6, $t6 # absolute difference of pad and doodle
-    		blt $t6, 4, BounceDoodle # if the distance is close enough, we count is as contact, and bounce
+    		blt $t6, 12, BounceDoodle # if the distance is close enough, we count is as contact, and bounce
     		j SkipAcc
     		BounceDoodle:
+    			blez $s6, SkipAcc
+    			
     			addi $sp, $sp, -4
 			sw $t4, 0($sp) # push plateform coord on stack
 			jal ConvertPixelPosToXY # call converter
@@ -219,9 +223,6 @@ DrawPadAndHitTest: # draws pads from platforms
 	addi $sp, $sp, 4 #pop y and x off
 	
     	jr $t0
-    	
-ManagePads: # delete stale pads, append new ones as time goes by, min 2 pads 
-	
 
 UpdateDoodleVertical: # called to update the doodle position based on velocity
 	lw $t0, 8($s1) # accell
