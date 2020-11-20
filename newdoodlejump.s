@@ -42,12 +42,14 @@
 	baigeGreen: .word 0xdaf542
 	background: .word 0xe8d697
 		             #0  4  8  12
-	positionStruct: .word 0, 0, 0, displayAddress # current x,y | velocity | previous pixel position to repaint
+	positionStruct: .word 56, 20, 0, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
+	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 .text
 	# global registers
           lw $s0, displayAddress # displayAddress
          # game states
       	  la $s1, positionStruct #spaced by 4
+
 	 # dims (all already spaced by 4) 
 	  lw $t4, screenUnit
 	  li $t2, 4
@@ -56,7 +58,6 @@
 	  mflo $s4
 	  mult $s4, $t2
 	  mflo $s4 # s4 is screen width 
-	  addi $s4, $s4 -8 # minus 8 seems to fix things...
 	  
 	  lw $s5, screenHight
 	  div $s5, $t4
@@ -68,12 +69,13 @@
 	# END global registers
 	jal fillBackground # fill backdrop first
 GameLoop:
-
+	jal todocatch
+	jal updateDoodleVertical
 	jal onMove # first check player position and update accordingly
-	# li $v0, 32 # sleep, enable later
-	# li $a0, 1000
-	# syscall
-	# todo pain background
+	jal DrawDoodle
+	li $v0, 32 # sleep, enable later
+	li $a0, 10
+	syscall
 	j GameLoop
 	j Exit
 
@@ -99,7 +101,6 @@ onMove: # only handle horizontal user movement and redraw, do not redraw if no m
         	addi $t0, $t0, -4 # move left by 1 
         	sw $t0, 0($s1) 
 
-		jal DrawDoodle
 		j onMoveDone
 	moveRight:
         	lw $t0, 0($s1) 
@@ -107,8 +108,6 @@ onMove: # only handle horizontal user movement and redraw, do not redraw if no m
         	addi $t0, $t0, 4 # move left by 1 
        		sw $t0, 0($s1) 
 
-		addi $t8, $t8, 4
-		jal DrawDoodle
 		
 	onMoveDone:
 	lw $t1, 0($sp)
@@ -125,11 +124,11 @@ DrawDoodle:
 	lw $t0, 12($s1)
 	sw $t5, 0($t0)
 	sw $t5, 4($t0)
-
+	
 	# paint new position
 	lw $t0, 0($s1) # x
     	lw $t1, 4($s1) # y
-
+	
 	mult $t1, $s4 
 	mflo $t3 # y * width
 	add $t4, $t3, $t0 # y + x
@@ -147,13 +146,27 @@ DrawDoodle:
 
 DrawPadSolid:
 
-setNextDoodlePosition:
+updateDoodleVertical: # called to update the doodle position based on velocity
+	lw $t0, 8($s1) # accell
+	lw $t1, 4($s1) # y coord
+	
+	li $t4, 2
+	div $t0 , $t4
+	mflo $t4
+	add $t1, $t1, $t4
+        sw $t1, 4($s1) # accelerate doodle
+
+        addi $t0 , $t0 , 1
+	sw $t0 , 8($s1) # decrement accell 
+        
+	jr $ra
 	
 fillBackground: # this function fills entire play area with background colour
 
 	lw $t5, background
 	
-	mult $s4, $s5 # get screen limits
+	li $t0, 32
+	mult $s4, $t0 # get screen limits
 	mflo $t2 # screen limits 
 	add $t2, $t2, $s0
 	
@@ -165,6 +178,18 @@ fillBackground: # this function fills entire play area with background colour
 		bge $t1, $t2, FBend
 		j FBwhile
 	FBend:
+	jr $ra
+
+todocatch:
+
+	lw $t1, 4($s1) # y coord
+	bgt $t1, 30, cif
+	jr $ra
+	cif: 
+		li $t0, 31
+		sw $t0, 4($s1) # y
+		li $t0, -9
+		sw $t0, 8($s1) # accel
 	jr $ra
 
 Print:
