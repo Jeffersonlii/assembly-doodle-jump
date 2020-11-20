@@ -32,7 +32,7 @@
 #####################################################################
 
 .data
-	p: .asciiz "HELP MEEE "
+	gameover: .asciiz "GAME OVER, YOU LOST"
 	displayAddress:	.word 0x10008000
 	screenWidth: .word 512
 	screenHight: .word 512
@@ -79,11 +79,11 @@ GameLoop:
 	jal UpdateDoodleVertical # update verticality of doodle
 	jal OnMove # check for player onclick events
 	jal DrawDoodle # draw doodle updated position
-	jal DrawPadField # draw all pads
+	jal DrawPadAndHitTest # draw all pads
 
-	#li $v0, 32
-	#li $a0, 10 # speed todo increment as game goes on 
-	#syscall
+	li $v0, 32
+	li $a0, 15 # speed todo increment as game goes on 
+	syscall
 	j GameLoop
 	
 	j Exit
@@ -174,17 +174,19 @@ initPads:# called once on init, randomly fills the platforms array
     		j ipWhile
     	ipEnd:
     	jr $ra
-DrawPadField: # draws pads from platforms
+DrawPadAndHitTest: # draws pads from platforms
 	li $t0, 9
 	sub $t0, $t0, $s3 # subtract number of pads from difficulty (more difficult = less pads)  
 	li $t1, 4 
+	
+	lw $t7, 12($s1) # last location of doodle
 	dpfWhile:
     		mult $t0, $t1 
     		mflo $t4 # array index 
     		add $t4, $t4, $s2
     		
     		lw $t3, 0($t4) # t3 has pad coords
-    		
+
     		lw $t5, padGreen
 		# fill colours 
 		sw $t5, ($t3)
@@ -196,6 +198,7 @@ DrawPadField: # draws pads from platforms
     		j dpfWhile
     	dpfEnd:
     	jr $ra
+    	
 ManagePads: # delete stale pads, append new ones as time goes by, min 2 pads 
 	
 
@@ -244,14 +247,12 @@ Todocatch:
 		li $t0, -9
 		sw $t0, 8($s1) # accel
 	jr $ra
-
-Print:
- 	li $v0, 4
-        la $a0, p
-        syscall 
-        jr $ra # return
-
+	
 Exit:
+	li $v0, 4
+        la $a0, gameover
+        syscall 
+        
 	li $v0, 10 # terminate the program gracefully
 	syscall
 
