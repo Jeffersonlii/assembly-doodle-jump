@@ -41,15 +41,20 @@
 	limeGreen: .word 0x7bf542
 	baigeGreen: .word 0xdaf542
 	background: .word 0xe8d697
+	padGreen: .word 0x39fc03
 		             #0  4  8  12
 	positionStruct: .word 56, 20, 0, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
+	                     
+	platforms: .space 10 # max of 10 platforms can be existing at 1 frame
+	difficulty: .word 0 # increments at a set pace, max is level 8
 .text
 	# global registers
           lw $s0, displayAddress # displayAddress
          # game states
       	  la $s1, positionStruct #spaced by 4
-
+	  la $s2, platforms #spaced by 4
+	  lw $s3, difficulty  
 	 # dims (all already spaced by 4) 
 	  lw $t4, screenUnit
 	  li $t2, 4
@@ -64,22 +69,26 @@
 	  mflo $s5
 	  mult $s5, $t2
 	  mflo $s5 # s4 is screen height 
-	  
 
 	# END global registers
-	jal fillBackground # fill backdrop first
+Main:
+	jal FillBackground # fill backdrop first
+	jal initPads # init platform
 GameLoop:
-	jal todocatch
-	jal updateDoodleVertical
-	jal onMove # first check player position and update accordingly
-	jal DrawDoodle
-	li $v0, 32 # sleep, enable later
-	li $a0, 10
-	syscall
+	jal Todocatch # placeholder 
+	jal UpdateDoodleVertical # update verticality of doodle
+	jal OnMove # check for player onclick events
+	jal DrawDoodle # draw doodle updated position
+	jal DrawPadField # draw all pads
+
+	#li $v0, 32
+	#li $a0, 10 # speed todo increment as game goes on 
+	#syscall
 	j GameLoop
+	
 	j Exit
 
-onMove: # only handle horizontal user movement and redraw, do not redraw if no movement
+OnMove: # only handle horizontal user movement and redraw, do not redraw if no movement
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # push ra on stack
 	
@@ -93,7 +102,7 @@ onMove: # only handle horizontal user movement and redraw, do not redraw if no m
 		# store past x and y here
 		beq $t2, 0x6a, moveLeft
 		beq $t2, 0x6b, moveRight
-
+		#todo listen for 's' and exit
 		j onMoveDone
 	moveLeft:
         	lw $t0, 0($s1) 
@@ -144,9 +153,53 @@ DrawDoodle:
         	
 	jr $ra # return
 
-DrawPadSolid:
+initPads:# called once on init, randomly fills the platforms array
+	li $t0, 9 #counter
+	ipWhile:
+		li $v0, 42  #generates the random number.
+		li $a1, 700  #random num between 0 and 1000
+    		syscall
+    		li $t1, 4 
+    		mult $a0, $t1 # a0 is out actual rng number
+    		mflo $t3
+    		add $t3, $t3, $s0 # t3 is randomly generated location for our pad
+    		
+    		mult $t0, $t1 
+    		mflo $t4 # array index 
+    		add $t4, $t4, $s2 
+    		
+    		sw $t3, 0($t4)
+    		beqz $t0, ipEnd
+    		addi $t0, $t0,  -1
+    		j ipWhile
+    	ipEnd:
+    	jr $ra
+DrawPadField: # draws pads from platforms
+	li $t0, 9
+	sub $t0, $t0, $s3 # subtract number of pads from difficulty (more difficult = less pads)  
+	li $t1, 4 
+	dpfWhile:
+    		mult $t0, $t1 
+    		mflo $t4 # array index 
+    		add $t4, $t4, $s2
+    		
+    		lw $t3, 0($t4) # t3 has pad coords
+    		
+    		lw $t5, padGreen
+		# fill colours 
+		sw $t5, ($t3)
+		sw $t5, 4($t3)
+		sw $t5, 8($t3)
+		sw $t5, 12($t3)
+    		beqz $t0, dpfEnd
+    		addi $t0, $t0,  -1
+    		j dpfWhile
+    	dpfEnd:
+    	jr $ra
+ManagePads: # delete stale pads, append new ones as time goes by, min 2 pads 
+	
 
-updateDoodleVertical: # called to update the doodle position based on velocity
+UpdateDoodleVertical: # called to update the doodle position based on velocity
 	lw $t0, 8($s1) # accell
 	lw $t1, 4($s1) # y coord
 	
@@ -161,7 +214,7 @@ updateDoodleVertical: # called to update the doodle position based on velocity
         
 	jr $ra
 	
-fillBackground: # this function fills entire play area with background colour
+FillBackground: # this function fills entire play area with background colour
 
 	lw $t5, background
 	
@@ -180,7 +233,7 @@ fillBackground: # this function fills entire play area with background colour
 	FBend:
 	jr $ra
 
-todocatch:
+Todocatch:
 
 	lw $t1, 4($s1) # y coord
 	bgt $t1, 30, cif
