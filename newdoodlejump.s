@@ -1,4 +1,3 @@
-
 #####################################################################
 #
 # CSCB58 Fall 2020 Assembly Final Project
@@ -57,6 +56,7 @@
 	  mflo $s4
 	  mult $s4, $t2
 	  mflo $s4 # s4 is screen width 
+	  addi $s4, $s4 -8 # minus 8 seems to fix things...
 	  
 	  lw $s5, screenHight
 	  div $s5, $t4
@@ -95,16 +95,15 @@ onMove: # only handle horizontal user movement and redraw, do not redraw if no m
 		j onMoveDone
 	moveLeft:
         	lw $t0, 0($s1) 
-        	beq $t0, 0, onMoveDone # if at corner, dont move
+        	ble $t0, 0, onMoveDone # if at corner, dont move
         	addi $t0, $t0, -4 # move left by 1 
         	sw $t0, 0($s1) 
 
 		jal DrawDoodle
 		j onMoveDone
 	moveRight:
-        	lw $t0, 0($s1)
-        	# todo 
-        	# beq $t0, , onMoveDone # if at corner, dont move
+        	lw $t0, 0($s1) 
+        	bge $t0, $s4, onMoveDone # if at corner, dont move
         	addi $t0, $t0, 4 # move left by 1 
        		sw $t0, 0($s1) 
 
@@ -148,7 +147,7 @@ DrawDoodle:
 
 DrawPadSolid:
 
-setNextDooblePosition:
+setNextDoodlePosition:
 	
 fillBackground: # this function fills entire play area with background colour
 
@@ -159,6 +158,7 @@ fillBackground: # this function fills entire play area with background colour
 	add $t2, $t2, $s0
 	
 	move $t1, $s0 # starting pixel pos
+	
 	FBwhile:
 		sw $t5, 0($t1) # fill action
 		addi $t1, $t1, 4 #address to fill
