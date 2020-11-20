@@ -66,8 +66,9 @@
 	  
 
 	# END global registers
-	
+	jal fillBackground # fill backdrop first
 GameLoop:
+
 	jal onMove # first check player position and update accordingly
 	# li $v0, 32 # sleep, enable later
 	# li $a0, 1000
@@ -135,7 +136,7 @@ DrawDoodle:
 	add $t4, $t3, $t0 # y + x
 	add $t4, $t4, $s0, # coord + address base
 
-	lw $t5, limeGreen
+	lw $t5, baigeGreen
 	# fill colours 
 	sw $t5, ($t4)
 	sw $t5, 4($t4)
@@ -146,6 +147,25 @@ DrawDoodle:
 	jr $ra # return
 
 DrawPadSolid:
+
+setNextDooblePosition:
+	
+fillBackground: # this function fills entire play area with background colour
+
+	lw $t5, background
+	
+	mult $s4, $s5 # get screen limits
+	mflo $t2 # screen limits 
+	add $t2, $t2, $s0
+	
+	move $t1, $s0 # starting pixel pos
+	FBwhile:
+		sw $t5, 0($t1) # fill action
+		addi $t1, $t1, 4 #address to fill
+		bge $t1, $t2, FBend
+		j FBwhile
+	FBend:
+	jr $ra
 
 Print:
  	li $v0, 4
