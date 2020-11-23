@@ -43,7 +43,7 @@
 	background: .word 0xe8d697
 	padGreen: .word 0x39fc03
 		             #0  4  8  12
-	positionStruct: .word 56, 20, -25, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
+	positionStruct: .word 56, 20, -20, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 	                     
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
@@ -91,7 +91,7 @@ GameLoop:
 	jal DrawPadAndHitTest # draw all pads
 
 	li $v0, 32
-	li $a0, 100 # speed todo increment as game goes on 
+	li $a0, 50 # speed todo increment as game goes on 
 	syscall
 	j GameLoop
 	
@@ -115,14 +115,12 @@ OnMove: # only handle horizontal user movement and redraw, do not redraw if no m
 		j onMoveDone
 	moveLeft:
         	lw $t0, 0($s1) 
-        	ble $t0, 0, onMoveDone # if at corner, dont move
         	addi $t0, $t0, -4 # move left by 1 
         	sw $t0, 0($s1) 
 
 		j onMoveDone
 	moveRight:
         	lw $t0, 0($s1) 
-        	bge $t0, $s4, onMoveDone # if at corner, dont move
         	addi $t0, $t0, 4 # move left by 1 
        		sw $t0, 0($s1) 
 	
@@ -224,7 +222,7 @@ DrawPadAndHitTest: # draws pads from platforms
 			addi $sp, $sp, 8 #pop y and x off
         
 			sw $s7, 4($s1) # y
-			li $s7, -25
+			li $s7, -20
 			sw $s7, 8($s1) # accel
 		SkipAcc:
 		
@@ -404,7 +402,7 @@ Gameover:
 				sw $t1, 0($t0)
 				li $t1, 20
 				sw $t1, 4($t0)
-				li $t1, -25
+				li $t1, -20
 				sw $t1, 8($t0)
 				
 				la $t0, difficulty
