@@ -43,7 +43,7 @@
 	background: .word 0xe8d697
 	padGreen: .word 0x39fc03
 		             #0  4  8  12
-	positionStruct: .word 56, 20, -16, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
+	positionStruct: .word 56, 20, -25, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 	                     
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
@@ -90,7 +90,7 @@ GameLoop:
 	jal DrawPadAndHitTest # draw all pads
 
 	li $v0, 32
-	li $a0, 25 # speed todo increment as game goes on 
+	li $a0, 100 # speed todo increment as game goes on 
 	syscall
 	j GameLoop
 	
@@ -165,7 +165,7 @@ initPads:# called once on init, randomly fills the platforms array
 	li $t0, 9 #counter
 	ipWhile:
 		li $v0, 42  #generates the random number.
-		li $a1, 800  #random num between 0 and 1000
+		li $a1, 1000  #random num between 0 and 1000
     		syscall
     		li $t1, 4 
     		mult $a0, $t1 # a0 is out actual rng number
@@ -223,7 +223,7 @@ DrawPadAndHitTest: # draws pads from platforms
 			addi $sp, $sp, 8 #pop y and x off
         
 			sw $s7, 4($s1) # y
-			li $s7, -15
+			li $s7, -25
 			sw $s7, 8($s1) # accel
 		SkipAcc:
 		
@@ -333,9 +333,9 @@ ScrollBoard:
     		
     		# $s4 is 128 
     		addi $t6, $s0, 4500 #  128 * 32
-    		bgt $t3, $t6, ResetToTop 
+    		bgt $t3, $t6, ResetToTop # if platform is out of range, 
     		j NoResetToTop
-    		ResetToTop:
+    		ResetToTop: # we reset the platform back to top of screen, with random x
     			li $v0, 42  #generates the random number.
 			li $a1, 100  #random num between 0 and 1000
     			syscall
@@ -358,7 +358,7 @@ ScrollBoard:
 Catch:
 
 	lw $t1, 4($s1) # y coord
-	bgt $t1, 30, cif
+	bgt $t1, 31, cif
 	jr $ra
 	cif: 
 		j Exit
