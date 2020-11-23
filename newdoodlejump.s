@@ -90,7 +90,7 @@ GameLoop:
 	jal DrawPadAndHitTest # draw all pads
 
 	li $v0, 32
-	li $a0, 50 # speed todo increment as game goes on 
+	li $a0, 25 # speed todo increment as game goes on 
 	syscall
 	j GameLoop
 	
@@ -187,6 +187,9 @@ initPads:# called once on init, randomly fills the platforms array
     		addi $t0, $t0,  -1
     		j ipWhile
     	ipEnd:
+    	
+    	addi $t3, $s0, 3648
+    	sw $t3, 0($t4)
     	jr $ra
 DrawPadAndHitTest: # draws pads from platforms
 	addi $sp, $sp, -4
@@ -256,6 +259,8 @@ DrawPadAndHitTest: # draws pads from platforms
 	
     	jr $t0
 
+
+
 UpdateDoodleVertical: # called to update the doodle position based on velocity
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # push ra on stack
@@ -291,7 +296,8 @@ UpdateDoodleVertical: # called to update the doodle position based on velocity
     	jr $ra
 	
 WipeBoard: # this function fills entire play area with background colour
-
+	   # note: dont run this on every frame
+	   
 	lw $t5, background
 	
 	li $t0, 32
@@ -324,6 +330,20 @@ ScrollBoard:
     		lw $t3, 0($t4) # t3 has pad coords
     		
     		add $t3, $t3, $s4 # add width to pad position to move down by 1
+    		
+    		# $s4 is 128 
+    		addi $t6, $s0, 4500 #  128 * 32
+    		bgt $t3, $t6, ResetToTop 
+    		j NoResetToTop
+    		ResetToTop:
+    			li $v0, 42  #generates the random number.
+			li $a1, 100  #random num between 0 and 1000
+    			syscall
+    			mult $a0, $t1 # a0 is out actual rng number
+    			mflo $t3
+    			add $t3, $t3, $s0
+    		NoResetToTop:
+    		
 		sw $t3, 0($t4) # save the coord 
 		
     		beqz $t7, dpfEnd
