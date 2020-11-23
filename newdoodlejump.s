@@ -50,6 +50,7 @@
 
 	difficulty: .word 0 # increments at a set pace, max is level 8
 .text
+
 	# global registers
           lw $s0, displayAddress # displayAddress
          # game states
@@ -110,7 +111,7 @@ OnMove: # only handle horizontal user movement and redraw, do not redraw if no m
 		# store past x and y here
 		beq $t2, 0x6a, moveLeft
 		beq $t2, 0x6b, moveRight
-		#todo listen for 's' and exit
+		beq $t2, 0x73, IsS # listen for 's' and exit
 		j onMoveDone
 	moveLeft:
         	lw $t0, 0($s1) 
@@ -124,7 +125,7 @@ OnMove: # only handle horizontal user movement and redraw, do not redraw if no m
         	bge $t0, $s4, onMoveDone # if at corner, dont move
         	addi $t0, $t0, 4 # move left by 1 
        		sw $t0, 0($s1) 
-
+	
 		
 	onMoveDone:
 	lw $t1, 0($sp)
@@ -361,7 +362,7 @@ Catch:
 	bgt $t1, 31, cif
 	jr $ra
 	cif: 
-		j Exit
+		j Gameover
 	jr $ra
 
 ConvertPixelPosToXY:
@@ -379,11 +380,42 @@ ConvertPixelPosToXY:
 	sw $s7, 0($sp) # push y on stack
 	
 	jr $ra
-Exit:
+	
+Gameover:
 	li $v0, 4
         la $a0, gameover
         syscall 
         
+        Endscreen:	
+        	li $v0, 32
+		li $a0, 50
+		syscall
+		
+        	lw $t0, 0xffff0000 
+		beq $t0, 1, IsInput
+		j Endscreen
+        	IsInput:
+			lw $t2, 0xffff0004 # gameover screen, 
+			beq $t2, 115, IsS # listen for 's'
+			j Endscreen
+			IsS:
+				la $t0, positionStruct
+				li $t1, 56
+				sw $t1, 0($t0)
+				li $t1, 20
+				sw $t1, 4($t0)
+				li $t1, -25
+				sw $t1, 8($t0)
+				
+				la $t0, difficulty
+				li $t1, 0
+				sw $t1, 0($t0)
+				j Main
+		j Endscreen
+		
+		
+        
+Exit:
 	li $v0, 10 # terminate the program gracefully
 	syscall
 
