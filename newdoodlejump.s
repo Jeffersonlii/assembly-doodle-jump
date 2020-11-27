@@ -43,16 +43,19 @@
 	background: .word 0xf5e8b3
 	padGreen: .word 0x39fc03
 	eyeBlack: .word 0x000000
+	
+	difficulty: .word 0 # increments at a set pace, max is level 8
+	score: .word 1 # the current score, difficulty should scale off score
+	scoreLength: .word 1# the length of the score (123 => 3)
+	expMap: .word 1, 10, 100, 1000, 10000, 100000 # hard coded 10^N, for getting the digits of score for printing
+	
 		             #0  4  8  12
 	positionStruct: .word 56, 20, -20, displayAddress, 0 # current x,y | acceleration | previous pixel position to repaint | direction facing, 0 for left, 1 for right
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 	                     
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
 
-	difficulty: .word 0 # increments at a set pace, max is level 8
-	#score: .word 0 # the current score, difficulty should scale off score
-	#scoreLength: .word 1# the length of the score (123 => 3)
-	#expMap: .word 1, 10, 100, 1000, 10000, 100000 # hard coded 10^N, for getting the digits of score for printing
+	
 .text
 
 	# global registers
@@ -391,7 +394,8 @@ ScrollBoard:
 	
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # push ra on stack
-		
+	
+	jal UpdateScore
 	li $t7, 9 # counter
 
 	sub $t7, $t7, $s3 # subtract number of pads from difficulty (more difficult = less pads)  
@@ -429,6 +433,18 @@ ScrollBoard:
 	addi $sp, $sp, 4 
     	jr $ra
 
+UpdateScore:
+		
+	la $t0, score
+	lw $t1, score
+	addi $t1, $t1, 1
+	sw $t1, ($t0)
+	
+	li $v0, 1
+	move $a0, $t1
+	syscall
+	
+	jr $ra
 Catch:
 
 	lw $t1, 4($s1) # y coord
