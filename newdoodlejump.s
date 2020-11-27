@@ -38,12 +38,13 @@
 	screenHight: .word 512
 	screenUnit: .word 16
 	
-	limeGreen: .word 0x7bf542
+	pantsGreen: .word 0x32a858
 	baigeGreen: .word 0xdaf542
 	background: .word 0xe8d697
 	padGreen: .word 0x39fc03
+	eyeBlack: .word 0x000000
 		             #0  4  8  12
-	positionStruct: .word 56, 20, -20, displayAddress,  # current x,y | acceleration | previous pixel position to repaint
+	positionStruct: .word 56, 20, -20, displayAddress, 0 # current x,y | acceleration | previous pixel position to repaint | direction facing, 0 for left, 1 for right
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 	                     
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
@@ -117,13 +118,17 @@ OnMove: # only handle horizontal user movement and redraw, do not redraw if no m
         	lw $t0, 0($s1) 
         	addi $t0, $t0, -4 # move left by 1 
         	sw $t0, 0($s1) 
-
+	
+		li $t0, 0 # update facing direction 
+        	sw $t0, 16($s1) 
 		j onMoveDone
 	moveRight:
         	lw $t0, 0($s1) 
         	addi $t0, $t0, 4 # move left by 1 
        		sw $t0, 0($s1) 
 	
+		li $t0, 1 # update facing direction 
+        	sw $t0, 16($s1) 
 		
 	onMoveDone:
 	lw $t1, 0($sp)
@@ -149,6 +154,7 @@ MoveDoodle:
 	lw $t0, 12($s1) # old pos
 	
 	move $a0, $t0
+	
 	li $a1, 0 # replace old drawing 
 	jal DrawDoodle
 	
@@ -165,31 +171,62 @@ MoveDoodle:
 DrawDoodle: # $a0 is position of doodle, # $a1 is colour mode // 1 for doodle, 0 for background
 	    # must not edit the $t4 register
 
+	lw $t8, background # pants colour
 	beqz $a1, ddIfBackground
 	j ddElseIdDoodle
 	ddIfBackground:
-		lw $t5, background
+		lw $t5, background # base colour
+		lw $t6, background # eye colour
+		lw $t7, background # pants colour
 		j ddelse
 	ddElseIdDoodle:
 		lw $t5, baigeGreen
+		lw $t6, eyeBlack # eye colour
+		lw $t7, pantsGreen # pants colour
 	ddelse:
 	
-	sw $t5, 0($a0)
-	sw $t5, 4($a0)
-	sw $t5, 8($a0)
+	sw $t6, 0($a0)
+	sw $t6, 8($a0)
+	sub $a0, $a0, $s4
+	sw $t7, 0($a0)
+	sw $t7, 4($a0)
+	sw $t7, 8($a0)
 	sub $a0, $a0, $s4
 	sw $t5, 0($a0)
 	sw $t5, 4($a0)
 	sw $t5, 8($a0)
 	sub $a0, $a0, $s4
-	sw $t5, 0($a0)
-	sw $t5, 4($a0)
-	sw $t5, 8($a0)
-	sub $a0, $a0, $s4
-	sw $t5, 0($a0)
-	sw $t5, 4($a0)
-	sw $t5, 8($a0)
 	
+       	lw $t0, 16($s1) 
+        	
+	beqz $t0 facingleft
+	j facingright
+	facingleft:
+		sw $t5, 0($a0)
+		sw $t6, 4($a0)# eye coulour
+		sw $t5, 8($a0) 
+		sw $t5, -4($a0)
+		sw $t5, -8($a0)
+		
+		sw $t8, 12($a0)  # prev destroy nose
+		sw $t8, 16($a0)
+		j endfacing
+	facingright:
+		sw $t5, 0($a0)
+		sw $t5, 4($a0)
+		sw $t6, 8($a0) # eye coulour
+		sw $t5, 12($a0)
+		sw $t5, 16($a0)
+		
+		sw $t8, -4($a0) # prev destroy nose
+		sw $t8, -8($a0)
+	endfacing:
+	sub $a0, $a0, $s4
+	sw $t5, 0($a0)
+	sw $t5, 4($a0)
+	sw $t5, 8($a0)
+	sub $a0, $a0, $s4
+	sw $t5, 4($a0)
 	jr $ra
 	
 initPads:# called once on init, randomly fills the platforms array
@@ -230,7 +267,7 @@ DrawPadAndHitTest: # draws pads from platforms
 	
 	li $t1, 4 
 	lw $t7, 12($s1) # last location of doodle
-	addi $t7, $t7, -6 # centering factor
+	addi $t7, $t7, -2 # centering factor
 	add $t7, $t7, $s4 # minus by 1 row
 	lw $s6, 8($s1) # current accel of doodle
 	dpfWhile:
@@ -242,7 +279,7 @@ DrawPadAndHitTest: # draws pads from platforms
     		
     		sub $t6, $t4, $t7
     		abs $t6, $t6 # absolute difference of pad and doodle
-    		blt $t6, 12, BounceDoodle # if the distance is close enough, we count is as contact, and bounce
+    		blt $t6, 14, BounceDoodle # if the distance is close enough, we count is as contact, and bounce # HITBOX
     		j SkipAcc
     		BounceDoodle:
     			blez $s6, SkipAcc
