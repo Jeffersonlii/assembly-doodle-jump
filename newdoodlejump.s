@@ -385,9 +385,6 @@ Gameover:
         syscall 
         
         Endscreen:	
-        	li $v0, 32
-		li $a0, 50
-		syscall
 		
         	lw $t0, 0xffff0000 
 		beq $t0, 1, IsInput
