@@ -87,7 +87,7 @@ GameLoop:
 	jal Catch # catch gameover 
 	jal UpdateDoodleVertical # update verticality of doodle
 	jal OnMove # check for player onclick events
-	jal DrawDoodle # draw doodle updated position
+	jal MoveDoodle # move doodle updated position
 	jal DrawPadAndHitTest # draw all pads
 
 	li $v0, 32
@@ -130,9 +130,12 @@ OnMove: # only handle horizontal user movement and redraw, do not redraw if no m
 	addi $sp, $sp, 4 #pop ra off
 	jr $t1 # return
 	
-DrawDoodle: 
+MoveDoodle: 
 # draws sprite based on position struct
 # todo support turning around
+	addi $sp, $sp, -4
+	sw $ra, 0($sp) # push ra on stack
+	
 	# calc new pos
 	lw $t2, 0($s1) # x
     	lw $t1, 4($s1) # y
@@ -142,24 +145,53 @@ DrawDoodle:
 	add $t4, $t3, $t2 # y + x
 	add $t4, $t4, $s0, # coord + address base
 	
-	
 	#replace old paint
-	lw $t0, 12($s1)
-	lw $t5, background
-	sw $t5, 0($t0)
-	sw $t5, 4($t0)
+	lw $t0, 12($s1) # old pos
 	
-	# new paint
-	lw $t5, baigeGreen
-	sw $t5, ($t4)
-	sw $t5, 4($t4)
+	move $a0, $t0
+	li $a1, 0 # replace old drawing 
+	jal DrawDoodle
+	
+	move $a0, $t4
+	li $a1, 1 # draw doodle 
+	jal DrawDoodle
 
 	#save last location to paint over
         sw $t4, 12($s1)
         
-        ddret:
-	jr $ra # return
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4 #pop ra off
+	jr $t1 # return
+DrawDoodle: # $a0 is position of doodle, # $a1 is colour mode // 1 for doodle, 0 for background
+	    # must not edit the $t4 register
 
+	beqz $a1, ddIfBackground
+	j ddElseIdDoodle
+	ddIfBackground:
+		lw $t5, background
+		j ddelse
+	ddElseIdDoodle:
+		lw $t5, baigeGreen
+	ddelse:
+	
+	sw $t5, 0($a0)
+	sw $t5, 4($a0)
+	sw $t5, 8($a0)
+	sub $a0, $a0, $s4
+	sw $t5, 0($a0)
+	sw $t5, 4($a0)
+	sw $t5, 8($a0)
+	sub $a0, $a0, $s4
+	sw $t5, 0($a0)
+	sw $t5, 4($a0)
+	sw $t5, 8($a0)
+	sub $a0, $a0, $s4
+	sw $t5, 0($a0)
+	sw $t5, 4($a0)
+	sw $t5, 8($a0)
+	
+	jr $ra
+	
 initPads:# called once on init, randomly fills the platforms array
 	li $t0, 9 #counter
 	ipWhile:
