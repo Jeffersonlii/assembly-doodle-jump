@@ -39,8 +39,8 @@
 	screenUnit: .word 16
 	
 	pantsGreen: .word 0x32a858
-	baigeGreen: .word 0xdaf542
-	background: .word 0xe8d697
+	baigeGreen: .word 0xe3cc39
+	background: .word 0xf5e8b3
 	padGreen: .word 0x39fc03
 	eyeBlack: .word 0x000000
 		             #0  4  8  12
@@ -50,6 +50,9 @@
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
 
 	difficulty: .word 0 # increments at a set pace, max is level 8
+	#score: .word 0 # the current score, difficulty should scale off score
+	#scoreLength: .word 1# the length of the score (123 => 3)
+	#expMap: .word 1, 10, 100, 1000, 10000, 100000 # hard coded 10^N, for getting the digits of score for printing
 .text
 
 	# global registers
@@ -91,6 +94,7 @@ GameLoop:
 	jal MoveDoodle # move doodle updated position
 	jal DrawPadAndHitTest # draw all pads
 
+	
 	li $v0, 32
 	li $a0, 50 # speed todo increment as game goes on 
 	syscall
@@ -202,8 +206,8 @@ DrawDoodle: # $a0 is position of doodle, # $a1 is colour mode // 1 for doodle, 0
 	beqz $t0 facingleft
 	j facingright
 	facingleft:
-		sw $t5, 0($a0)
-		sw $t6, 4($a0)# eye coulour
+		sw $t6, 0($a0)# eye coulour
+		sw $t5, 4($a0)
 		sw $t5, 8($a0) 
 		sw $t5, -4($a0)
 		sw $t5, -8($a0)
@@ -387,7 +391,9 @@ ScrollBoard:
 	
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # push ra on stack
+		
 	li $t7, 9 # counter
+
 	sub $t7, $t7, $s3 # subtract number of pads from difficulty (more difficult = less pads)  
 	li $t1, 4 
 	sbWhile:
