@@ -32,6 +32,9 @@
 #####################################################################
 
 .data
+	debug1: .asciiz "\n bruh \n"
+	debug2: .asciiz "\n bruh2 \n"
+	
 	gameover: .asciiz "GAME OVER, YOU LOST"
 	displayAddress:	.word 0x10008000
 	screenWidth: .word 512
@@ -45,9 +48,9 @@
 	eyeBlack: .word 0x000000
 	
 	difficulty: .word 0 # increments at a set pace, max is level 8
-	score: .word 1 # the current score, difficulty should scale off score
-	scoreLength: .word 1# the length of the score (123 => 3)
-	expMap: .word 1, 10, 100, 1000, 10000, 100000 # hard coded 10^N, for getting the digits of score for printing
+	score: .word 0, 0, 0, 1, 0 # the current score, difficulty should scale off score
+				   # 0 - 3 are digits to the score, 4th is the full score
+				   # 1,7,3,4,1734
 	
 		             #0  4  8  12
 	positionStruct: .word 56, 20, -20, displayAddress, 0 # current x,y | acceleration | previous pixel position to repaint | direction facing, 0 for left, 1 for right
@@ -96,8 +99,7 @@ GameLoop:
 	jal OnMove # check for player onclick events
 	jal MoveDoodle # move doodle updated position
 	jal DrawPadAndHitTest # draw all pads
-
-	
+	#jal DisplayScore
 	li $v0, 32
 	li $a0, 50 # speed todo increment as game goes on 
 	syscall
@@ -415,11 +417,12 @@ ScrollBoard:
     		j NoResetToTop
     		ResetToTop: # we reset the platform back to top of screen, with random x
     			li $v0, 42  #generates the random number.
-			li $a1, 100  #random num between 0 and 1000
+			li $a1, 100  #random num between 0 and 100
     			syscall
     			mult $a0, $t1 # a0 is out actual rng number
     			mflo $t3
     			add $t3, $t3, $s0
+    			add $t3, $t3, 624
     		NoResetToTop:
     		
 		sw $t3, 0($t4) # save the coord 
@@ -433,20 +436,247 @@ ScrollBoard:
 	addi $sp, $sp, 4 
     	jr $ra
 
-UpdateScore:
+UpdateScore: # update the score 
+	addi $sp, $sp, -4
+	sw $ra, 0($sp) # push ra on stack
+	
+	li $t0, 12 # loop index
+	
+	usFor:
+		la $t1, score
 		
-	la $t0, score
-	lw $t1, score
-	addi $t1, $t1, 1
-	sw $t1, ($t0)
+		add $t1, $t1, $t0 # index
+		lw $t3, ($t1) # load element
+		
+		beq $t3, 9, flipover # flip over to next
+		# if not flip over, just increment the score in this index and break
+		add $t3, $t3, 1
+		sw $t3, ($t1) # save
+		j usEndFor # break out 
+		flipover:
+			li $t3, 0
+			sw $t3, ($t1) # set back to 0 and flip over
+		
+		sub $t0, $t0, 4
+		beq $t0, 0, usEndFor
+		j usFor
+	usEndFor:
+	la $t0, score # increment actual score
+	lw $t1, 16($t0)
+	add $t1, $t1, 1
+	sw $t1, 16($t0)
 	
-	li $v0, 1
-	move $a0, $t1
-	syscall
+	jal DisplayScore
 	
-	jr $ra
-Catch:
+	lw $ra, 0($sp) #get ra
+	addi $sp, $sp, 4 
+    	jr $ra
 
+DisplayScore:
+	li $t0, 0 # loop index
+	lw $t5, eyeBlack # color to fill
+	lw $t6, background # color to fill
+	dsFor:
+		la $t1, score
+
+		li $a1, 4 # index off set 
+		mult $t0, $a1 # 32 * index 
+		mflo $a1
+		add $a1, $a1, $s0 # 32 * index + base address
+		
+		add $t1, $t1, $t0 # index
+		lw $t3, ($t1) # load element
+	
+		beq $t3, 0, Zero
+		beq $t3, 1, One
+		beq $t3, 2, Two
+		beq $t3, 3, Three
+		beq $t3, 4, Four
+		beq $t3, 5, Five
+		beq $t3, 6, Six
+		beq $t3, 7, Seven
+		beq $t3, 8, Eight
+		beq $t3, 9, Nine
+		
+		dsAfterPrint:
+		beq $t0, 12, dsEndFor
+		add $t0, $t0, 4
+		j dsFor
+	dsEndFor:
+	jr $ra
+	Zero:
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+    		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		j dsAfterPrint
+	One:
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+    		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		j dsAfterPrint
+	Two:
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+    		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		j dsAfterPrint
+	Three:
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 0($a1)
+		sw $t6, 4($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+    		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		j dsAfterPrint
+	Four:
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 4($a1)
+		sw $t5, ($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+		j dsAfterPrint
+	Five:
+		sw $t5, 8($a1)
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t5, 0($a1)
+		sw $t5, 8($a1)
+		j dsAfterPrint
+	Six:
+		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 0($a1)
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t5, 0($a1)
+		sw $t5, 8($a1)
+		j dsAfterPrint
+	Seven:
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+
+		j dsAfterPrint
+	Eight:
+		sw $t5, 0($a1)
+		sw $t5, 8($a1)
+		sw $t5, 4($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		add $a1, $a1, $s4
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		j dsAfterPrint
+	Nine:
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		add $a1, $a1, $s4
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+		j dsAfterPrint
+	
+Catch:
 	lw $t1, 4($s1) # y coord
 	bgt $t1, 31, cif
 	jr $ra
