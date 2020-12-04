@@ -14,14 +14,15 @@
 #
 # Which milestone is reached in this submission?
 # (See the assignment handout for descriptions of the milestones)
-# - Milestone 1/2/3/4/5 (choose the one the applies)
+# - Milestone 5
 #
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
 # 1. Fancier graphics (better doodle sprite with left/right facing logic), with start/end screens
 # 2. Realistic physics (doodle will speedup/slowdown depending on time in air)
 # 3. Boosting / power-ups (jetpack spawns every 100 points)
-# ... (add more if necessary)
+# 4. scorecount (bottom middle score counter)
+# 5. Dynamic increase in difficulty (game speed increments as score increases)
 #
 # Link to video demonstration for final submission:
 # - (insert YouTube / MyMedia / other URL here). 
@@ -29,8 +30,7 @@
 # Any additional information that the TA needs to know:
 # - please use mustafa's MARS fork to avoid crashing
 # - game speeds up at 100, 300, 600, 1000, 1500, 2100, ....  points
-# todo
-# - rocket
+
 #####################################################################
 
 .data
@@ -859,7 +859,7 @@ IncreaseDiffy: # increase difficulty
 	lw $t0, ($t3)
 	sw $t0, 4($t3) # save cur jetpack pos to last pos
 	li $v0, 42  #generates the random number.
-	li $a1, 100  #random num between 0 and 100
+	li $a1, 55  #random num between 0 and 100
     	syscall	
     	li $t1, 4
     	mult $a0, $t1 # a0 is out actual rng number
@@ -941,6 +941,12 @@ Gameover:
 				sw $t3,  8($t1)
 				sw $t3, 12($t1) 
 				sw $t3, 16($t1)
+				
+				la $t3, jetpack # reset jetpack
+				li $t0, 0x10008000
+				sw $t0, 0($t3)
+				sw $t0, 4($t3)
+	
 				j Main
 		j Endscreen
 		
