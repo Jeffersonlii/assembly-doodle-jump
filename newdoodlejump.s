@@ -18,8 +18,8 @@
 #
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
-# 1. Fancier graphics (better doodle sprite with left/right facing logic)
-# 2. (fill in the feature, if any)
+# 1. Fancier graphics (better doodle sprite with left/right facing logic), with start/end screens
+# 2. 
 # 3. (fill in the feature, if any)
 # ... (add more if necessary)
 #
@@ -27,14 +27,12 @@
 # - (insert YouTube / MyMedia / other URL here). 
 #
 # Any additional information that the TA needs to know:
-# - you may have notice the title screen doesnt go away when the game starts, but it slowly gets overpainted by the game.
-# - this is a feature as I think it looks cooler
-#
+# - please use mustafa's MARS fork to avoid crashing
+# - game speeds up at every 50 point interval
 # todo
-# - add start / gameover screen 
 # - increase difficulty as game progresses
 # - jump physics
-# - rocket/springs
+# - rocket
 #####################################################################
 
 .data
@@ -53,13 +51,13 @@
 	padGreen: .word 0x39fc03
 	eyeBlack: .word 0x000000
 	
-	difficulty: .word 0 # increments at a set pace, max is level 8
+	difficulty: .word 0 # increments at a set pace, max is level 15
 	score: .word 0, 0, 0, 1, 0 # the current score, difficulty should scale off score
 				   # 0 - 3 are digits to the score, 4th is the full score
 				   # 1,7,3,4,1734
 	
 		             #0  4  8  12
-	positionStruct: .word 56, 20, -20, displayAddress, 0 # current x,y | acceleration | previous pixel position to repaint | direction facing, 0 for left, 1 for right
+	positionStruct: .word 56, 20, -20, displayAddress, 0 # current x | y | acceleration | previous pixel position to repaint | direction facing, 0 for left, 1 for right
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 	                     
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
@@ -107,6 +105,8 @@ Main:
 		syscall
 		lw $t0, 0xffff0000 
 		bne $t0, 1, InitOnPress
+		
+		jal WipeBoard # wipe start screen before playing game
 		j GameLoop
 
 GameLoop:
@@ -116,8 +116,14 @@ GameLoop:
 	jal MoveDoodle # move doodle updated position
 	jal DrawPadAndHitTest # draw all pads
 	jal DisplayScore
+	
 	li $v0, 32
-	li $a0, 50 # speed todo increment as game goes on 
+	li $t0, 50 # base speed
+	li $t1, 3 # multiplier 
+	mult $s3, $t1
+	mflo $t2  
+	sub $t0, $t0, $t2
+	move $a0, $t0 # speed increases as difficulty goes up 
 	syscall
 	j GameLoop
 	
@@ -287,9 +293,7 @@ initPads:# called once on init, randomly fills the platforms array
 DrawPadAndHitTest: # draws pads from platforms
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # push ra on stack
-	li $t0, 9 # counter
-	sub $t0, $t0, $s3 # subtract number of pads from difficulty (more difficult = less pads)  
-	
+	li $t0, 9 # counter	
 	li $t1, 4 
 	lw $t7, 12($s1) # last location of doodle
 	addi $t7, $t7, -2 # centering factor
@@ -415,8 +419,6 @@ ScrollBoard:
 	
 	jal UpdateScore
 	li $t7, 9 # counter
-
-	sub $t7, $t7, $s3 # subtract number of pads from difficulty (more difficult = less pads)  
 	li $t1, 4 
 	sbWhile:
     		mult $t7, $t1 
@@ -481,11 +483,14 @@ UpdateScore: # update the score
 	add $t1, $t1, 1
 	sw $t1, 16($t0)
 	
-
+	li  $t0, 50 # here we check the score, if its a multiple of 50, we increment the difficulty
+	div $t1, $t0 # i mod 50
+	mfhi $t1  # mod
+	beqz $t1, IncreaseDiffy
 	
 	lw $ra, 0($sp) #get ra
 	addi $sp, $sp, 4 
-    	jr $ra
+    	jr $ra 
 
 DisplayScore:
 	li $t0, 0 # loop index
@@ -732,7 +737,15 @@ DisplayScore:
 		sw $t6, 4($a1)
 		sw $t6, 0($a1)
 		j dsAfterPrint
+
+IncreaseDiffy: # increase difficulty
 	
+	add $s3, $s3, 1
+	bge $s3, 14, min
+	jr $ra
+	min:
+		li $s3, 14 # max diff is 14 
+		jr $ra
 Catch:
 	lw $t1, 4($s1) # y coord
 	bgt $t1, 31, cif
