@@ -20,7 +20,7 @@
 # (See the assignment handout for the list of additional features)
 # 1. Fancier graphics (better doodle sprite with left/right facing logic), with start/end screens
 # 2. Realistic physics (doodle will speedup/slowdown depending on time in air)
-# 3. (fill in the feature, if any)
+# 3. Boosting / power-ups (jetpack spawns every 100 points)
 # ... (add more if necessary)
 #
 # Link to video demonstration for final submission:
@@ -48,7 +48,9 @@
 	background: .word 0xf5e8b3
 	padGreen: .word 0x39fc03
 	eyeBlack: .word 0x000000
+	jetpackBlue: .word 0x76e2f5
 	
+	jetpack: .word 0x10008000, 0x10008000 # cur position of jetpack | last position of jetpack
 	difficulty: .word 0 # increments at a set pace, max is level 15
 	score: .word 0, 0, 0, 0, 0 # the current score, difficulty should scale off score
 				   # 0 - 3 are digits to the score, 4th is the full score
@@ -60,7 +62,7 @@
 	                     
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
 
-	
+
 .text
 
 	# global registers
@@ -113,13 +115,14 @@ GameLoop:
 	jal OnMove # check for player onclick events
 	jal MoveDoodle # move doodle updated position
 	jal DrawPadAndHitTest # draw all pads
+	jal drawJetpackAndHitTest
 	jal DisplayScore
 	
 	li $v0, 32
 	li $t0, 30 # base speed
 	li $t1, 2 # multiplier 
-	mult $s3, $t1
-	mflo $t2  
+	mult $s3, $t1 # multiply difficulty with a multiplier, this is then subtracted from sleep time
+	mflo $t2      # high diff => lower sleep time 
 	sub $t0, $t0, $t2
 	move $a0, $t0 # speed increases as difficulty goes up 
 	syscall
@@ -354,8 +357,101 @@ DrawPadAndHitTest: # draws pads from platforms
 	
     	jr $t0
 
+drawJetpackAndHitTest:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp) # push ra on stack
+	
+	la $t3, jetpack
+	lw $t0, 0($t3)
+	lw $t1, 4($t3)
+	beq $t0, 0x10008000, DJHTEnd # 0x10008000 means NO jetpack
+	
+	lw $t7, 12($s1) # last location of doodle
+		
+	sub $t6, $t0, $t7
+    	abs $t6, $t6 # absolute difference of rocket and doodle
+   	blt $t6, 14, RocketDoodle 
+   	add $t6, $t6, $s4 
+   	blt $t6, 14, RocketDoodle 
+   	add $t6, $t6, $s4 
+   	blt $t6, 14, RocketDoodle 
+   	add $t6, $t6, $s4 
+   	blt $t6, 14, RocketDoodle 
+   	add $t6, $t6, $s4 
+   	blt $t6, 14, RocketDoodle 
+   	j dpDraw
+	RocketDoodle:
+		li $t2, -70
+		sw $t2, 8($s1)
+		li $t2, 0x10008000
+		sw $t2, 0($t3)
+		
+		move $a0, $t0
+		li $a1, 0
+		jal DrawJetPack
+	
+		j DJHTEnd
+	dpDraw:
+	
+	#replace last frame with background colour
+	move $a0, $t1
+	li $a1, 0
+	jal DrawJetPack
+	
+	# fill new colours 
+	move $a0, $t0
+	li $a1, 1
+	jal DrawJetPack
+		
+	DJHTEnd:
+	lw $t0, 0($sp) #get ra
+	addi $sp, $sp, 4 
+	
+    	jr $t0
+DrawJetPack: # $a0 is coord, $a1 is mode : 1 = jetpack, 0 = background
+	# fill new colours 
+	lw $t5, jetpackBlue # color to fill
+	lw $t6, background # color to fill
+	lw $t7, eyeBlack # color to fill
+	beqz $a1, backgroundColours
+	j drawjp
+	backgroundColours:
+		lw $t5, background # color to fill
+		lw $t7, background # color to fill
+	drawjp:
 
-
+	sw $t6, ($a0)
+	sw $t7, 4($a0)
+	sw $t6, 8($a0)
+	sw $t7, 12($a0)
+	sw $t6, 16($a0)
+	add $a0, $a0, $s4
+	sw $t5, ($a0)
+	sw $t5, 4($a0)
+	sw $t6, 8($a0)
+	sw $t5, 12($a0)
+	sw $t5, 16($a0)
+	add $a0, $a0, $s4
+	sw $t6, ($a0)
+	sw $t5, 4($a0)
+	sw $t5, 8($a0)
+	sw $t5, 12($a0)
+	sw $t6, 16($a0)
+	add $a0, $a0, $s4
+	sw $t5, ($a0)
+	sw $t5, 4($a0)
+	sw $t5, 8($a0)
+	sw $t5, 12($a0)
+	sw $t5, 16($a0)
+	add $a0, $a0, $s4
+	sw $t5, ($a0)
+	sw $t5, 4($a0)
+	sw $t6, 8($a0)
+	sw $t5, 12($a0)
+	sw $t5, 16($a0)
+	add $a0, $a0, $s4
+			
+	jr $ra
 UpdateDoodleVertical: # called to update the doodle position based on velocity
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # push ra on stack
@@ -363,7 +459,7 @@ UpdateDoodleVertical: # called to update the doodle position based on velocity
 	lw $t0, 8($s1) # accell
 	lw $t1, 4($s1) # y coord
 	
-	li $t3, 90 
+	li $t3, 90
 	div $t3, $t0 # i mod 50
 	mfhi $t3  # mod
 	beqz $t3, udpdone
@@ -448,11 +544,20 @@ ScrollBoard:
     		
 		sw $t3, 0($t4) # save the coord 
 		
-    		beqz $t7, dpfEnd
+    		beqz $t7, sbEnd
     		addi $t7, $t7,  -1
     		j sbWhile
     	sbEnd:
 
+	la $t3, jetpack
+	lw $t0, 0($t3)
+	bne $t0, 0x10008000 ScrollJetpack
+	j scEnd
+	ScrollJetpack:
+		sw $t0, 4($t3) # save current coord into last coord
+		add $t0, $t0, $s4
+		sw $t0, 0($t3) 
+	scEnd:
     	lw $ra, 0($sp) #get ra
 	addi $sp, $sp, 4 
     	jr $ra
@@ -747,7 +852,21 @@ IncreaseDiffy: # increase difficulty
 	div $t1, $t0 # i mod 50 * difficulty
 	
 	mfhi $t1  # mod
-	bnez $t1, IDend
+	bnez $t1, IDend # do not increase diffy
+	
+	# spawn a jetpack
+	la $t3, jetpack
+	lw $t0, ($t3)
+	sw $t0, 4($t3) # save cur jetpack pos to last pos
+	li $v0, 42  #generates the random number.
+	li $a1, 100  #random num between 0 and 100
+    	syscall	
+    	li $t1, 4
+    	mult $a0, $t1 # a0 is out actual rng number
+    	mflo $t4
+    	add $t4, $t4, $s0
+	sw $t4, 0($t3) 
+	
 	
 	add $s3, $s3, 1
 	bge $s3, 14, min
