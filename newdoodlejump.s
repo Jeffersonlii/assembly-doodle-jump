@@ -19,7 +19,7 @@
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
 # 1. Fancier graphics (better doodle sprite with left/right facing logic), with start/end screens
-# 2. 
+# 2. Realistic physics (doodle will speedup/slowdown depending on time in air)
 # 3. (fill in the feature, if any)
 # ... (add more if necessary)
 #
@@ -28,9 +28,8 @@
 #
 # Any additional information that the TA needs to know:
 # - please use mustafa's MARS fork to avoid crashing
-# - game speeds up at every 50 point interval
+# - game speeds up at 100, 300, 600, 1000, 1500, 2100, ....  points
 # todo
-# - jump physics
 # - rocket
 #####################################################################
 
@@ -814,9 +813,15 @@ Gameover:
 				li $t1, -20
 				sw $t1, 8($t0)
 				
-				la $t0, difficulty
-				li $t1, 0
-				sw $t1, 0($t0)
+				li $s3, 0 # reset diff to 0
+				
+				la $t1, score # reset score to 0
+				li $t3, 0
+				sw $t3, ($t1) 
+				sw $t3, 4($t1) 
+				sw $t3,  8($t1)
+				sw $t3, 12($t1) 
+				sw $t3, 16($t1)
 				j Main
 		j Endscreen
 		
