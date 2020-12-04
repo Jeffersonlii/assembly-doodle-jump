@@ -18,7 +18,7 @@
 #
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
+# 1. Fancier graphics (better doodle sprite with left/right facing logic)
 # 2. (fill in the feature, if any)
 # 3. (fill in the feature, if any)
 # ... (add more if necessary)
@@ -29,6 +29,11 @@
 # Any additional information that the TA needs to know:
 # - (write here, if any)
 #
+# todo
+# - add start / gameover screen 
+# - increase difficulty as game progresses
+# - jump physics
+# - rocket/springs
 #####################################################################
 
 .data
@@ -518,6 +523,10 @@ DisplayScore:
 		sw $t5, 8($a1)
 		add $a1, $a1, $s4
     		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+    		sw $t5, 0($a1)
 		sw $t5, 4($a1)
 		sw $t5, 8($a1)
 		j dsAfterPrint
@@ -532,6 +541,10 @@ DisplayScore:
 		add $a1, $a1, $s4
 		sw $t5, 4($a1)
 		sw $t6, 0($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+    		sw $t6, 0($a1)
+		sw $t5, 4($a1)
 		sw $t6, 8($a1)
 		add $a1, $a1, $s4
     		sw $t5, 0($a1)
@@ -552,6 +565,10 @@ DisplayScore:
 		sw $t6, 8($a1)
 		add $a1, $a1, $s4
     		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
+    		sw $t5, 0($a1)
 		sw $t5, 4($a1)
 		sw $t5, 8($a1)
 		j dsAfterPrint
@@ -568,6 +585,10 @@ DisplayScore:
 		sw $t5, 4($a1)
 		sw $t6, 0($a1)
 		add $a1, $a1, $s4
+    		sw $t6, 0($a1)
+		sw $t6, 4($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
     		sw $t5, 0($a1)
 		sw $t5, 4($a1)
 		sw $t5, 8($a1)
@@ -582,8 +603,12 @@ DisplayScore:
 		sw $t6, 0($a1)
 		add $a1, $a1, $s4
 		sw $t5, 8($a1)
-		sw $t5, 4($a1)
+		sw $t6, 4($a1)
 		sw $t5, ($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 4($a1)
+		sw $t5, 0($a1)
 		add $a1, $a1, $s4
 		sw $t5, 8($a1)
 		sw $t6, 4($a1)
@@ -592,21 +617,29 @@ DisplayScore:
 	Five:
 		sw $t5, 8($a1)
 		sw $t5, 4($a1)
-		sw $t6, 0($a1)
+		sw $t5, 0($a1)
 		add $a1, $a1, $s4
-		sw $t5, 4($a1)
-		sw $t6, 0($a1)
+		sw $t6, 4($a1)
+		sw $t5, 0($a1)
 		sw $t6, 8($a1)
 		add $a1, $a1, $s4
 		sw $t5, 8($a1)
 		sw $t5, 4($a1)
-		sw $t6, 0($a1)
+		sw $t5, 0($a1)
 		add $a1, $a1, $s4
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
+		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
 		sw $t5, 4($a1)
 		sw $t5, 0($a1)
-		sw $t5, 8($a1)
 		j dsAfterPrint
 	Six:
+		sw $t5, 0($a1)
+		sw $t6, 4($a1)
+		sw $t6, 8($a1)
+		add $a1, $a1, $s4
 		sw $t5, 0($a1)
 		sw $t6, 4($a1)
 		sw $t6, 8($a1)
@@ -632,14 +665,17 @@ DisplayScore:
 		sw $t6, 4($a1)
 		sw $t6, 0($a1)
 		add $a1, $a1, $s4
-		sw $t5, 8($a1)
-		sw $t6, 4($a1)
+		sw $t6, 8($a1)
+		sw $t5, 4($a1)
 		sw $t6, 0($a1)
 		add $a1, $a1, $s4
-		sw $t5, 8($a1)
-		sw $t6, 4($a1)
+		sw $t6, 8($a1)
+		sw $t5, 4($a1)
 		sw $t6, 0($a1)
-
+		add $a1, $a1, $s4
+		sw $t6, 8($a1)
+		sw $t5, 4($a1)
+		sw $t6, 0($a1)
 		j dsAfterPrint
 	Eight:
 		sw $t5, 0($a1)
@@ -657,6 +693,10 @@ DisplayScore:
 		sw $t5, 8($a1)
 		sw $t5, 0($a1)
 		sw $t6, 4($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t5, 0($a1)
+		sw $t5, 4($a1)
 		j dsAfterPrint
 	Nine:
 		sw $t5, 0($a1)
@@ -670,6 +710,10 @@ DisplayScore:
 		sw $t5, 0($a1)
 		sw $t5, 4($a1)
 		sw $t5, 8($a1)
+		add $a1, $a1, $s4
+		sw $t5, 8($a1)
+		sw $t6, 4($a1)
+		sw $t6, 0($a1)
 		add $a1, $a1, $s4
 		sw $t5, 8($a1)
 		sw $t6, 4($a1)
