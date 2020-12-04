@@ -27,7 +27,8 @@
 # - (insert YouTube / MyMedia / other URL here). 
 #
 # Any additional information that the TA needs to know:
-# - (write here, if any)
+# - you may have notice the title screen doesnt go away when the game starts, but it slowly gets overpainted by the game.
+# - this is a feature as I think it looks cooler
 #
 # todo
 # - add start / gameover screen 
@@ -92,19 +93,29 @@
 Main:
 	jal WipeBoard # fill backdrop first
 	jal initPads # init platform
-	InitOnPress: # waits for user imput before startingthe game 
+	
+	li $t0, 9
+	mult $t0, $s4
+	mflo $t0
+	add $a1, $s0, $t0 
+	add $a1, $a1, 12 #calc starting position for logo 
+	
+	jal PaintStartGraphic
+	InitOnPress: # waits for user imput before starting the game 
 		li $v0, 32
 		li $a0, 50
 		syscall
 		lw $t0, 0xffff0000 
 		bne $t0, 1, InitOnPress
+		j GameLoop
+
 GameLoop:
 	jal Catch # catch gameover 
 	jal UpdateDoodleVertical # update verticality of doodle
 	jal OnMove # check for player onclick events
 	jal MoveDoodle # move doodle updated position
 	jal DrawPadAndHitTest # draw all pads
-	#jal DisplayScore
+	jal DisplayScore
 	li $v0, 32
 	li $a0, 50 # speed todo increment as game goes on 
 	syscall
@@ -427,7 +438,6 @@ ScrollBoard:
     			mult $a0, $t1 # a0 is out actual rng number
     			mflo $t3
     			add $t3, $t3, $s0
-    			add $t3, $t3, 624
     		NoResetToTop:
     		
 		sw $t3, 0($t4) # save the coord 
@@ -471,7 +481,7 @@ UpdateScore: # update the score
 	add $t1, $t1, 1
 	sw $t1, 16($t0)
 	
-	jal DisplayScore
+
 	
 	lw $ra, 0($sp) #get ra
 	addi $sp, $sp, 4 
@@ -481,6 +491,8 @@ DisplayScore:
 	li $t0, 0 # loop index
 	lw $t5, eyeBlack # color to fill
 	lw $t6, background # color to fill
+	
+	
 	dsFor:
 		la $t1, score
 
@@ -488,8 +500,9 @@ DisplayScore:
 		mult $t0, $a1 # 32 * index 
 		mflo $a1
 		add $a1, $a1, $s0 # 32 * index + base address
-		
+		add $a1, $a1, 3360 # index
 		add $t1, $t1, $t0 # index
+		
 		lw $t3, ($t1) # load element
 	
 		beq $t3, 0, Zero
@@ -749,8 +762,17 @@ Gameover:
         la $a0, gameover
         syscall 
         
-        Endscreen:	
+        # show gameover screen
+        li $t0, 9
+	mult $t0, $s4
+	mflo $t0
+	add $a1, $s0, $t0 
+	add $a1, $a1, 12 #calc starting position for game over 
+	jal WipeBoard # remove all from board
+	jal PaintGameOver
 		
+        Endscreen:	
+   
         	lw $t0, 0xffff0000 
 		beq $t0, 1, IsInput
 		j Endscreen
@@ -774,7 +796,584 @@ Gameover:
 		j Endscreen
 		
 		
-        
+PaintStartGraphic:
+	# starting location is a1
+	lw $t5, eyeBlack # color to fill
+	lw $t6, background # color to fill
+	
+	
+	sw $t5, 0($a1) # 1 row 1 slice
+	sw $t5, 4($a1)
+	sw $t6, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t5, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t5, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+		
+	sw $t5, 48($a1)
+	sw $t5, 52($a1)
+	sw $t6, 56($a1)
+	
+	sw $t6, 60($a1)
+	
+	sw $t5, 64($a1)
+	sw $t6, 68($a1)
+	sw $t6, 72($a1)
+	
+	sw $t6, 76($a1)
+	
+	sw $t5, 80($a1)
+	sw $t5, 84($a1)
+	sw $t5, 88($a1)
+	
+	add $a1, $a1, $s4 # 1row 2 slice
+	sw $t5, 0($a1)
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+		
+	sw $t5, 48($a1)
+	sw $t6, 52($a1)
+	sw $t5, 56($a1)
+	
+	sw $t6, 60($a1)
+	
+	sw $t5, 64($a1)
+	sw $t6, 68($a1)
+	sw $t6, 72($a1)
+	
+	sw $t6, 76($a1)
+	
+	sw $t5, 80($a1)
+	sw $t6, 84($a1)
+	sw $t6, 88($a1)
+	
+	add $a1, $a1, $s4# row 1 slice 3
+	sw $t5, 0($a1)
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+		
+	sw $t5, 48($a1)
+	sw $t6, 52($a1)
+	sw $t5, 56($a1)
+	
+	sw $t6, 60($a1)
+	
+	sw $t5, 64($a1)
+	sw $t6, 68($a1)
+	sw $t6, 72($a1)
+	
+	sw $t6, 76($a1)
+	
+	sw $t5, 80($a1)
+	sw $t5, 84($a1)
+	sw $t5, 88($a1)
+	
+	add $a1, $a1, $s4 # row 1 slice 4
+    	sw $t5, 0($a1)
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t5, 0($a1)
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+		
+	sw $t5, 48($a1)
+	sw $t6, 52($a1)
+	sw $t5, 56($a1)
+	
+	sw $t6, 60($a1)
+	
+	sw $t5, 64($a1)
+	sw $t6, 68($a1)
+	sw $t6, 72($a1)
+	
+	sw $t6, 76($a1)
+	
+	sw $t5, 80($a1)
+	sw $t6, 84($a1)
+	sw $t6, 88($a1)
+	
+	add $a1, $a1, $s4 # row 1 slice 5
+    	sw $t5, 0($a1)
+	sw $t5, 4($a1)
+	sw $t6, 8($a1)
+	
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t5, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t5, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+		
+	sw $t5, 48($a1)
+	sw $t5, 52($a1)
+	sw $t6, 56($a1)
+	
+	sw $t6, 60($a1)
+	
+	sw $t5, 64($a1)
+	sw $t5, 68($a1)
+	sw $t5, 72($a1)
+	
+	sw $t6, 76($a1)
+		
+	sw $t5, 80($a1)
+	sw $t5, 84($a1)
+	sw $t5, 88($a1)
+	
+	li $t0, 3
+	mult $t0, $s4
+	mflo $t0
+	add $a1, $a1, $t0 # new row
+	add $a1, $a1, 40
+
+	sw $t5, 0($a1) # 2 row 1 slice
+	sw $t5, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t6, 40($a1)
+	sw $t6, 44($a1)
+	sw $t5, 48($a1)
+	
+	sw $t6, 52($a1)
+	
+	sw $t5, 56($a1)
+	sw $t5, 60($a1)
+	sw $t5, 64($a1)
+	
+	add $a1, $a1, $s4
+	
+	sw $t6, 0($a1) # 2 row 2 slice
+	sw $t5, 4($a1)
+	sw $t6, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t5, 36($a1)
+	sw $t6, 40($a1)
+	sw $t5, 44($a1)
+	sw $t5, 48($a1)
+	
+	sw $t6, 52($a1)
+	
+	sw $t5, 56($a1)
+	sw $t6, 60($a1)
+	sw $t5, 64($a1)
+	
+	add $a1, $a1, $s4
+	
+	sw $t6, 0($a1) # 2 row 3 slice
+	sw $t5, 4($a1)
+	sw $t6, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t5, 40($a1)
+	sw $t6, 44($a1)
+	sw $t5, 48($a1)
+	
+	sw $t6, 52($a1)
+	
+	sw $t5, 56($a1)
+	sw $t6, 60($a1)
+	sw $t5, 64($a1)
+	
+	add $a1, $a1, $s4
+		
+	sw $t6, 0($a1) # 2 row 4 slice
+	sw $t5, 4($a1)
+	sw $t6, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t6, 40($a1)
+	sw $t6, 44($a1)
+	sw $t5, 48($a1)
+	
+	sw $t6, 52($a1)
+	
+	sw $t5, 56($a1)
+	sw $t5, 60($a1)
+	sw $t5, 64($a1)
+	
+	add $a1, $a1, $s4
+		
+	sw $t5, 0($a1) # 2 row 4 slice
+	sw $t5, 4($a1)
+	sw $t6, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t5, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t6, 40($a1)
+	sw $t6, 44($a1)
+	sw $t5, 48($a1)
+	
+	sw $t6, 52($a1)
+	
+	sw $t5, 56($a1)
+	sw $t6, 60($a1)
+	sw $t6, 64($a1)
+	
+	jr $ra
+	
+	
+PaintGameOver:
+	# starting location is a1
+	lw $t5, eyeBlack # color to fill
+	lw $t6, background # color to fill
+	
+	sw $t5, 0($a1) # 1 row 1 slice
+	sw $t5, 4($a1)
+	sw $t5, 8($a1)
+	sw $t5, 12($a1)
+	
+	sw $t6, 16($a1)
+	
+	sw $t5, 20($a1)
+	sw $t5, 24($a1)
+	sw $t5, 28($a1)
+	
+	sw $t6, 32($a1)
+	
+	sw $t5, 36($a1)
+	sw $t6, 40($a1)
+	sw $t6, 44($a1)
+	sw $t6, 48($a1)
+	sw $t5, 52($a1)
+	
+	sw $t6, 56($a1)
+	
+	sw $t5, 60($a1)
+	sw $t5, 64($a1)
+	sw $t5, 68($a1)
+	
+	add $a1, $a1, $s4
+		
+	sw $t5, 0($a1) # 1 row 2 slice
+	sw $t6, 4($a1)
+	sw $t6, 8($a1)
+	sw $t6, 12($a1)
+	
+	sw $t6, 16($a1)
+	
+	sw $t5, 20($a1)
+	sw $t6, 24($a1)
+	sw $t5, 28($a1)
+	
+	sw $t6, 32($a1)
+	
+	sw $t5, 36($a1)
+	sw $t5, 40($a1)
+	sw $t6, 44($a1)
+	sw $t5, 48($a1)
+	sw $t5, 52($a1)
+	
+	sw $t6, 56($a1)
+	
+	sw $t5, 60($a1)
+	sw $t6, 64($a1)
+	sw $t6, 68($a1)
+	add $a1, $a1, $s4
+		
+	sw $t5, 0($a1) # 1 row 3 slice
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	sw $t5, 12($a1)
+	
+	sw $t6, 16($a1)
+	
+	sw $t5, 20($a1)
+	sw $t5, 24($a1)
+	sw $t5, 28($a1)
+	
+	sw $t6, 32($a1)
+	
+	sw $t5, 36($a1)
+	sw $t6, 40($a1)
+	sw $t5, 44($a1)
+	sw $t6, 48($a1)
+	sw $t5, 52($a1)
+	
+	sw $t6, 56($a1)
+	
+	sw $t5, 60($a1)
+	sw $t5, 64($a1)
+	sw $t5, 68($a1)
+	add $a1, $a1, $s4
+		
+	sw $t5, 0($a1) # 1 row 4 slice
+	sw $t6, 4($a1)
+	sw $t6, 8($a1)
+	sw $t5, 12($a1)
+	
+	sw $t6, 16($a1)
+	
+	sw $t5, 20($a1)
+	sw $t6, 24($a1)
+	sw $t5, 28($a1)
+	
+	sw $t6, 32($a1)
+	
+	sw $t5, 36($a1)
+	sw $t6, 40($a1)
+	sw $t6, 44($a1)
+	sw $t6, 48($a1)
+	sw $t5, 52($a1)
+	
+	sw $t6, 56($a1)
+	
+	sw $t5, 60($a1)
+	sw $t6, 64($a1)
+	sw $t6, 68($a1)
+	add $a1, $a1, $s4
+		
+	sw $t5, 0($a1) # 1 row 5 slice
+	sw $t5, 4($a1)
+	sw $t5, 8($a1)
+	sw $t5, 12($a1)
+	
+	sw $t6, 16($a1)
+	
+	sw $t5, 20($a1)
+	sw $t6, 24($a1)
+	sw $t5, 28($a1)
+	
+	sw $t6, 32($a1)
+	
+	sw $t5, 36($a1)
+	sw $t6, 40($a1)
+	sw $t6, 44($a1)
+	sw $t6, 48($a1)
+	sw $t5, 52($a1)
+	
+	sw $t6, 56($a1)
+	
+	sw $t5, 60($a1)
+	sw $t5, 64($a1)
+	sw $t5, 68($a1)
+	
+	li $t0, 3
+	mult $t0, $s4
+	mflo $t0
+	add $a1, $a1, $t0 # new row
+	add $a1, $a1, 40
+		
+	sw $t5, 0($a1) # 2 row 1 slice
+	sw $t5, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t5, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+	
+	sw $t5, 48($a1)
+	sw $t5, 52($a1)
+	sw $t5, 56($a1)
+	
+	add $a1, $a1, $s4
+	sw $t5, 0($a1) # 2 row 2 slice
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t6, 40($a1)
+	
+	sw $t6, 44($a1)
+	
+	sw $t5, 48($a1)
+	sw $t6, 52($a1)
+	sw $t5, 56($a1)
+	
+	add $a1, $a1, $s4
+	sw $t5, 0($a1) # 2 row 3 slice
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t5, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+	
+	sw $t5, 48($a1)
+	sw $t5, 52($a1)
+	sw $t6, 56($a1)
+	
+	add $a1, $a1, $s4
+	sw $t5, 0($a1) # 2 row 4 slice
+	sw $t6, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t5, 16($a1)
+	sw $t6, 20($a1)
+	sw $t5, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t6, 36($a1)
+	sw $t6, 40($a1)
+	
+	sw $t6, 44($a1)
+	
+	sw $t5, 48($a1)
+	sw $t6, 52($a1)
+	sw $t5, 56($a1)
+	
+	add $a1, $a1, $s4
+	sw $t5, 0($a1) # 2 row 4 slice
+	sw $t5, 4($a1)
+	sw $t5, 8($a1)
+	
+	sw $t6, 12($a1)
+	
+	sw $t6, 16($a1)
+	sw $t5, 20($a1)
+	sw $t6, 24($a1)
+	
+	sw $t6, 28($a1)
+	
+	sw $t5, 32($a1)
+	sw $t5, 36($a1)
+	sw $t5, 40($a1)
+	
+	sw $t6, 44($a1)
+	
+	sw $t5, 48($a1)
+	sw $t6, 52($a1)
+	sw $t5, 56($a1)
+	
+	jr $ra
 Exit:
 	li $v0, 10 # terminate the program gracefully
 	syscall
