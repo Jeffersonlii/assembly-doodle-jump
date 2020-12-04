@@ -30,7 +30,6 @@
 # - please use mustafa's MARS fork to avoid crashing
 # - game speeds up at every 50 point interval
 # todo
-# - increase difficulty as game progresses
 # - jump physics
 # - rocket
 #####################################################################
@@ -52,12 +51,12 @@
 	eyeBlack: .word 0x000000
 	
 	difficulty: .word 0 # increments at a set pace, max is level 15
-	score: .word 0, 0, 0, 1, 0 # the current score, difficulty should scale off score
+	score: .word 0, 0, 0, 0, 0 # the current score, difficulty should scale off score
 				   # 0 - 3 are digits to the score, 4th is the full score
 				   # 1,7,3,4,1734
-	
-		             #0  4  8  12
-	positionStruct: .word 56, 20, -20, displayAddress, 0 # current x | y | acceleration | previous pixel position to repaint | direction facing, 0 for left, 1 for right
+
+		             #0    4    8              12 16 
+	positionStruct: .word 56, 20, -30, displayAddress, 0 # current x | y | acceleration | previous pixel position to repaint | direction facing, 0 for left, 1 for right
 	                     # x must manuely be word aligned (inc by 4), y is automatically word aligned (inc by 1)
 	                     
 	platforms: .space 20 # max of 10 platforms can be existing at 1 frame, + 10 platforms last position
@@ -118,8 +117,8 @@ GameLoop:
 	jal DisplayScore
 	
 	li $v0, 32
-	li $t0, 50 # base speed
-	li $t1, 3 # multiplier 
+	li $t0, 30 # base speed
+	li $t1, 2 # multiplier 
 	mult $s3, $t1
 	mflo $t2  
 	sub $t0, $t0, $t2
@@ -320,7 +319,7 @@ DrawPadAndHitTest: # draws pads from platforms
 			addi $sp, $sp, 8 #pop y and x off
         
 			sw $s7, 4($s1) # y
-			li $s7, -20
+			li $s7, -30
 			sw $s7, 8($s1) # accel
 		SkipAcc:
 		
@@ -365,6 +364,11 @@ UpdateDoodleVertical: # called to update the doodle position based on velocity
 	lw $t0, 8($s1) # accell
 	lw $t1, 4($s1) # y coord
 	
+	li $t3, 90 
+	div $t3, $t0 # i mod 50
+	mfhi $t3  # mod
+	beqz $t3, udpdone
+	
 	bltz $t0 HeadUp
 	j HeadDown
 	HeadUp:
@@ -378,6 +382,7 @@ UpdateDoodleVertical: # called to update the doodle position based on velocity
 		goup:
 		addi $t1, $t1, -1
         	sw $t1, 4($s1) # go up 
+        	
         	j udpdone
 	HeadDown:
 		addi $t1, $t1, 1
@@ -483,10 +488,7 @@ UpdateScore: # update the score
 	add $t1, $t1, 1
 	sw $t1, 16($t0)
 	
-	li  $t0, 50 # here we check the score, if its a multiple of 50, we increment the difficulty
-	div $t1, $t0 # i mod 50
-	mfhi $t1  # mod
-	beqz $t1, IncreaseDiffy
+	jal IncreaseDiffy
 	
 	lw $ra, 0($sp) #get ra
 	addi $sp, $sp, 4 
@@ -740,11 +742,21 @@ DisplayScore:
 
 IncreaseDiffy: # increase difficulty
 	
+	li  $t0, 100 # here we check the score, if its a multiple of 50, we increment the difficulty
+	mult $t0, $s3 # scale difficulty increase on current difficulty, space them out
+	mflo $t0
+	div $t1, $t0 # i mod 50 * difficulty
+	
+	mfhi $t1  # mod
+	bnez $t1, IDend
+	
 	add $s3, $s3, 1
 	bge $s3, 14, min
-	jr $ra
+	
+	j IDend
 	min:
 		li $s3, 14 # max diff is 14 
+	IDend:
 		jr $ra
 Catch:
 	lw $t1, 4($s1) # y coord
